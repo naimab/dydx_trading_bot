@@ -36,26 +36,26 @@ def get_ISO_times():
     # Format datetimes
     times_dict = {
         "range_1": {
-            "from_iso": format(date_start_1),
-            "to_iso": format(date_start_0),
+            "from_iso": format_time(date_start_1),
+            "to_iso": format_time(date_start_0),
         },
-            "range_2": {
-            "from_iso": format(date_start_2),
-            "to_iso": format(date_start_1),
+        "range_2": {
+            "from_iso": format_time(date_start_2),
+            "to_iso": format_time(date_start_1),
         },
         "range_3": {
-            "from_iso": format(date_start_3),
-            "to_iso": format(date_start_2),
+            "from_iso": format_time(date_start_3),
+            "to_iso": format_time(date_start_2),
         },
         "range_4": {
-            "from_iso": format(date_start_4),
-            "to_iso": format(date_start_3),
+            "from_iso": format_time(date_start_4),
+            "to_iso": format_time(date_start_3),
         },
     }
     return times_dict
 
 
-# Get Historical Codes
+
 
 # Write cointegration functions
 
