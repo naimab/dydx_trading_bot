@@ -32,8 +32,19 @@ def open_positions(client):
         print(f"Encourntered an error: {e}")
         return None
 
-    # Initialize contiane for botagent results
+    # Initialize contianer for bot_agent results
     bot_agents = []
+    # Opening JSON file
+    try:
+        open_positions_file = open("bot_agents.json")
+        open_positions_dict = json.load(open_positions_file)
+
+        for p in open_positions_dict:
+            bot_agents.append(p)
+        pprint(bot_agents)
+        
+    except:
+        bot_agents = []
 
     # Find ZSCORE triggerS
     for index, row in df.iterrows():
@@ -136,7 +147,8 @@ def open_positions(client):
                         accept_failsafe_base_price=accept_failsafe_base_price,
                         z_score=z_score,
                         half_life=half_life,
-                        hedge_ratio=hedge_ratio
+                        hedge_ratio=hedge_ratio,
+                        intercept=intercept,
                     )
 
                     # Open Trades

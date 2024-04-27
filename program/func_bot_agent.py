@@ -26,6 +26,7 @@ class BotAgent:
             z_score,
             half_life,
             hedge_ratio,
+            intercept,
     ):
         
         # Initialize class variables
@@ -43,6 +44,7 @@ class BotAgent:
         self.z_score = z_score
         self.half_life = half_life
         self.hedge_ratio = hedge_ratio
+        self.hedge_ratio = intercept
 
         # Initialize output variable
         # Pair status options are FAILED, LIVE, CLOSE, ERRROR
@@ -52,6 +54,7 @@ class BotAgent:
             "hedge_ratio": hedge_ratio,
             "z_score": z_score,
             "half_life": half_life,
+            "intercept": intercept,
             "order_id_m1": "",
             "order_m1_size": base_size,
             "order_m1_side": base_side,
