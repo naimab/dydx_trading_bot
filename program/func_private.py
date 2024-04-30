@@ -82,6 +82,7 @@ def close_order(client, market, side, size, price):
         order_status = check_order_status(client, close_order["order"]["id"])
         if order_status == "FILLED":
             print(f"Successfully closed order in {market}")
+            return close_order
         else:
             print(f"Failed to close order in {market}")
             raise Exception("Failed to close order")

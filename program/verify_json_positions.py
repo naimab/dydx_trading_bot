@@ -1,11 +1,6 @@
-from constants import CLOSE_AT_ZSCORE_CROSS, MODE
 from func_utils import format_number
-from func_public import get_candles_recent
-from func_cointegration import calculate_zscore
-from func_private import place_market_order, check_order_status
 import json
 import time
-
 from pprint import pprint
 
 

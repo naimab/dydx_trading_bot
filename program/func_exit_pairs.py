@@ -124,6 +124,7 @@ def manage_trade_exits(client):
                 # Close position for market 1
                 print(">>> Closing market 1 <<<")
                 print(f"Closing position for {position_market_m1}")
+                print(f"Side: {side_m1}")
 
                 close_order_m1 = close_order(
                   client,
@@ -131,18 +132,15 @@ def manage_trade_exits(client):
                   side=side_m1,
                   size=position_size_m1,
                   price=accept_price_m1,
-                )
-
-                print(f"Side: {side_m1}")
-                print(close_order_m1["order"]["id"])
-                print(">>> Closing <<<")
+                )            
 
                 # Protect API
-                time.sleep(1)
+                time.sleep(2)
 
                 # Close position for market 2
                 print(">>> Closing market 2 <<<")
                 print(f"Closing position for {position_market_m2}")
+                print(f"Side: {side_m2}")
 
                 close_order_m2 = close_order(
                   client,
@@ -152,24 +150,27 @@ def manage_trade_exits(client):
                   price=accept_price_m2,
                 )
 
-                print(f"Side: {side_m2}")
-                print(close_order_m2["order"]["id"])
-                print(">>> Closing <<<")
-
-                time.sleep(1)
+                time.sleep(2)
                 # After placing close order, check if it was successful:
                 close_status_m1 = check_order_status(client, close_order_m1["order"]["id"])
                 close_status_m2 = check_order_status(client, close_order_m2["order"]["id"])
 
-                if close_status_m1 == "FILLED" and close_status_m2 == "FILLED":
-                    print(f"Both positions closed for {position_market_m1} and {position_market_m2}")
+                if close_status_m1 == "FILLED":
+                    print(f"Confirming closed position for {position_market_m1}")
                 else:
-                    print(f"Failed to close positions for {position_market_m1} and {position_market_m2}")
+                    print(f"Failed to close positions for {position_market_m1}")
+                    updated_positions.append(position)  # Only append if the close failed
+
+                if close_status_m2 == "FILLED":
+                    print(f"Confirming closed for {position_market_m2}")
+                else:
+                    print(f"Failed to close positions for {position_market_m2}")
                     updated_positions.append(position)  # Only append if the close failed
 
             except Exception as e:
-                print(f"Exit failed for pair: {position_market_m1} and {position_market_m2}")
+                print(f"Exit failed for pair: {position_market_m1} and {position_market_m2}") 
                 updated_positions.append(position)
+                # check if one is open and the other is not and if so close that position.
 
         #   Keep record of items and save
         else:
