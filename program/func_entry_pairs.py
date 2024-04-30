@@ -26,22 +26,23 @@ def open_positions(client):
     try:
         markets = client.public.get_markets().data
         if markets is None:
-            raise ValueError("Invalide get_markets response")
+            raise ValueError("Invalid get_markets response")
 
     except Exception as e:
         print(f"Encourntered an error: {e}")
         return None
 
-    # Initialize contianer for bot_agent results
-    bot_agents = []
+
+
     # Opening JSON file
     try:
         open_positions_file = open("bot_agents.json")
         open_positions_dict = json.load(open_positions_file)
 
-        for p in open_positions_dict:
-            bot_agents.append(p)
-        pprint(bot_agents)
+        bot_agents = []
+        if len(open_positions_dict) > 0:
+            for p in open_positions_dict:
+                bot_agents.append(p)
         
     except:
         bot_agents = []
@@ -60,6 +61,7 @@ def open_positions(client):
         try:
             series_1 = get_candles_recent(client, base_market)
             series_2 = get_candles_recent(client, quote_market)
+
         except Exception as e:
             print(f"Error getting candles: {e}")
         
@@ -119,11 +121,11 @@ def open_positions(client):
                 # If checks pass, place trades
                 if (check_base and check_quote):
 
-
                     # Check account balance
                     try:
                         account = client.private.get_account()
                         free_collateral = float(account.data["account"]["freeCollateral"])
+                        print('---')
                         print(f"Balance: {free_collateral} and minimum at {USD_MIN_COLLATERAL}")
                     except Exception as e:
                         print(f"Error with get_account:, {e}")
@@ -153,15 +155,17 @@ def open_positions(client):
 
                     # Open Trades
                     bot_open_dict = bot_agent.open_trades()
+
                     if bot_open_dict is None:
                         print("Failed to open trades, received no data.")
                         continue  # Skip this iteration or handle appropriately
                     
                     # Handles succes in opening trades
                     if bot_open_dict["pair_status"] == "live":
-
+                        print("Appending to bot_agents list.")
                         # Append to list of bot agents
                         bot_agents.append(bot_open_dict)
+                        print(f"Current number of agents: {len(bot_agents)}")
                         del(bot_open_dict)
                         
                         # Confirm live status in print
@@ -170,11 +174,12 @@ def open_positions(client):
                     elif bot_open_dict.get("pair_status") == "failed":
                         continue
                 else:
-                    print(f"Quantity does not meet min order size. Move to next pair\n")
+                    print(f"Quantity does not meet min order size. Move to next pair")
                     print(f"{base_market}: {check_base} and {quote_market}: {check_quote}")
+                    print('---')
                     continue
     # Save Agents
-    print(f"Success: Manage open trades checked")
+    print(f"Success: Managed open trades.")
     if len(bot_agents) > 0:
         with open("bot_agents.json", "w") as f:
             json.dump(bot_agents, f)

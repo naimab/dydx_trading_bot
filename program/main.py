@@ -5,6 +5,8 @@ from func_public import construct_market_prices
 from func_cointegration import store_cointegration_results
 from func_entry_pairs import open_positions
 from func_exit_pairs import manage_trade_exits
+from verify_json_positions import verify_json_positions
+import time
 
 if __name__ == "__main__":
     
@@ -16,7 +18,12 @@ if __name__ == "__main__":
         print("Error connecting to client", e)
         exit(1) 
 
-    # abort all open positioins
+    try:
+        verify_json_positions(client)
+
+    except Exception as e:
+        print(f"Problem verifying position: {e}")
+
     if ABORT_ALL_POSITIONS:
         try:
             print("Closing all positions...")
@@ -51,8 +58,8 @@ if __name__ == "__main__":
              print("Error saving cointegrated pairs: ", e)
              exit(1)
 
-    while True:
-         
+
+    while True:    
         if MANAGE_EXITS:
             # Construct Market Prices
             try:
@@ -61,10 +68,8 @@ if __name__ == "__main__":
             except Exception as e:
                 print("Error managing exiting positions ", e)
                 exit(1)
-
         # Find Cointegrate Pairs
         if PLACE_TRADES:
-
             # Construct Market Prices
             try:
                 print("Find trading opportunities")
@@ -72,3 +77,5 @@ if __name__ == "__main__":
             except Exception as e:
                 print("Error trading pairs: ", e)
                 exit(1)
+        print("Waiting so you can check json file")
+        time.sleep(10)

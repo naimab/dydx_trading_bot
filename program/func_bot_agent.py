@@ -1,4 +1,5 @@
-from func_private import place_market_order, check_order_status
+from func_private import place_market_order, check_order_status, close_order
+from func_utils import format_number
 from datetime import datetime, timedelta
 import time
 from pprint import pprint
@@ -44,7 +45,7 @@ class BotAgent:
         self.z_score = z_score
         self.half_life = half_life
         self.hedge_ratio = hedge_ratio
-        self.hedge_ratio = intercept
+        self.intercept = intercept
 
         # Initialize output variable
         # Pair status options are FAILED, LIVE, CLOSE, ERRROR
@@ -103,117 +104,82 @@ class BotAgent:
     # Open Trades
     def open_trades(self):
 
+        # Place Base Order
+        base_order = self.place_and_confirm_order(
+            market=self.market_1,
+            side=self.base_side,
+            size=self.base_size,
+            price=self.base_price,
+            order_key="order_id_m1",
+        )
+        # exit early if base order fails
+        if not base_order:
+            return self.order_dict
+        # Place Quote Order
+        
+        quote_order = self.place_and_confirm_order(
+        market=self.market_2,
+        side=self.quote_side,
+        size=self.quote_size,
+        price=self.quote_price,
+        order_key="order_id_m2",
+          )
+                # Get markets for referece of tick size   
+        try:
+            markets = self.client.public.get_markets().data
+            if markets is None:
+                raise ValueError("Invalide get_markets response")
+    
+        except Exception as e:
+            print(f"Encountered an error: {e}")
+            return None
+        
+        side_m1_sell = self.quote_side
+        tick_size_m1 = markets["markets"][self.market_1]["tickSize"]
+        accept_price_m1 = float(self.base_price) * 1.05 if side_m1_sell == "BUY" else float(self.base_price) * 0.95
+        accept_price_m1 = format_number(accept_price_m1, tick_size_m1)
+        
+        if not quote_order:
+            close_order(client = self.client,
+                        market=self.market_1, 
+                        side= self.quote_side, #opposite of base
+                        size= self.base_size, 
+                        price=accept_price_m1)
+            return self.order_dict
+        
+        self.order_dict["pair_status"] = "live"
+        self.order_dict["order_time_m1"] = datetime.now().isoformat()
+        return self.order_dict
+
+
+    def place_and_confirm_order(self, market, side, size, price, order_key):
         # Print status
         print("---")
-        print(f"{self.market_1}: Placing first order...")
-        print(f"Side: {self.base_side}, Size: {self.base_size}. Price: {self.base_price}")
+        print(f"{market}: Placing order...")
+        print(f"Side: {side}, Size: {size}. Price: {price}")
+        print("---")
 
-        # Place Base Order
         try:
-            base_order = place_market_order(
-                self.client,
-                market=self.market_1,
-                side=self.base_side,
-                size=self.base_size,
-                price=self.base_price,
-                reduce_only=False,
-            )
+            order = place_market_order(
+            self.client, 
+            market=market, 
+            side=side, 
+            size=size, 
+            price=price, 
+            reduce_only=False
+        )
+        
+            self.order_dict[order_key] = order["order"]["id"]
+            self.order_dict[f"order_time_{order_key[-2:]}"] = datetime.now().isoformat()
 
-            # Store the order id
-            self.order_dict["order_id_m1"] = base_order["order"]["id"]
-            self.order_dict["order_time_m1"] = datetime.now().isoformat()
+            time.sleep(2)
+            # Confirm order is filled
+            if self.check_order_status_by_id(self.order_dict[order_key]) == "live":
+                return True
         
         except Exception as e:
             self.order_dict["pair_status"] = "failed"
-            self.order_dict["comments"] = f"Market 1 {self.market_1}:, {e}"
-            return self.order_dict
-        
+            self.order_dict["comments"] = f"Market {market}: {e}"
+            print(f"Error trading: {market}, {e}")
 
-        # Ensure order is live before processing
-        order_status_m1 = self.check_order_status_by_id(self.order_dict["order_id_m1"])
-
-        # Guard: Abort if order failed
-        if order_status_m1 != "live":
-            self.order_dict["pair_status"] = "failed"
-            self.order_dict["comments"] = f"{self.market_1} failed to fill"
-            return self.order_dict
-        
-        else:
-            # Print status - opening second order
-            # Print status
-            print("---")
-            print(f"{self.market_2}: Placing second order...")
-            print(f"Side: {self.quote_side}, Size: {self.quote_size}. Price: {self.quote_price}")
-            print("---")
-
-            # Place Quote Order
-            try:
-                quote_order = place_market_order(
-                self.client,
-                market=self.market_2,
-                side=self.quote_side,
-                size=self.quote_size,
-                price=self.quote_price,
-                reduce_only=False,
-              )
-
-                # Store the order id
-                self.order_dict["order_id_m2"] = quote_order["order"]["id"]
-                self.order_dict["order_time_m2"] = datetime.now().isoformat()
-
-            except Exception as e:
-                self.order_dict["pair_status"] = "failed"
-                self.order_dict["comments"] = f"Market 2 {self.market_2}: , {e}"
-                return self.order_dict
-
-        # Ensure order is live before processing
-        order_status_m2 = self.check_order_status_by_id(self.order_dict["order_id_m2"])
-
-        # Guard: Abort if order failed
-        if order_status_m2 != "live":
-            self.order_dict["pair_status"] = "failed"
-            self.order_dict["comments"] = f"{self.market_2} failed to fill"
-
-            #   Close order 1:
-            try:
-                close_order = place_market_order(
-                self.client,
-                market=self.market_1,
-                side=self.quote_side,
-                size=self.base_size,
-                price=self.accept_failsafe_base_price,
-                reduce_only=True
-            )
-
-                # Ensure order is live before processing
-                time.sleep(2)
-                order_status_close_order = check_order_status(self.client, close_order["order"]["id"])
-                if order_status_close_order != "FILLED":
-                    print("ABORT PROGRAM MANUALLY")
-                    print("Unexpected Error")
-                    print(order_status_close_order)
-
-                    # Abort
-                    raise Exception("Critical error in trading operation")
-
-
-
-            except Exception as e:
-
-                self.order_dict["pair_status"] = "error"
-                self.order_dict["comments"] = f"Close Market 1 {self.market_1}: , {e}"
-                print("ABORT PROGRAM")
-                print("Unexpected Error")
-                print(order_status_close_order)
-
-                # Send Message
-                # send_message("Failed to execute. Code red. Error code: 101")
-
-                # ABORT
-                raise Exception("Critical error in trading operation")
-
-        # Return success result
-        else:
-            self.order_dict["pair_status"] = "live"
-            return self.order_dict
-
+        return False

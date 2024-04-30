@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import time
 from pprint import pprint
 from func_utils import format_number
+import json
 
 
 # Get existing open positions
@@ -27,14 +28,15 @@ def is_open_positions(client, market):
 def check_order_status(client, order_id):
     try:
         order = client.private.get_order_by_id(order_id)
-        if order.data:
-            if "order" in order.data.keys():
+        
+        if "order" in order.data.keys():
                 return order.data["order"]["status"]
         else:
             return "FAILED"
     except Exception as e:
         print(f"Error getting order status: {e}")
         return "FAILED"
+
 
 # Place market order
 def place_market_order(client, market, side, size, price, reduce_only):
@@ -64,7 +66,29 @@ def place_market_order(client, market, side, size, price, reduce_only):
     # return result
     return placed_order.data
 
-
+def close_order(client, market, side, size, price):
+    print("Attempting to close order...")
+    try:
+        close_order = place_market_order(
+            client,
+            market=market,
+            side=side,
+            size=size,
+            price=price,
+            reduce_only=True,
+        )
+        time.sleep(5)
+        # Ensure order closure
+        order_status = check_order_status(client, close_order["order"]["id"])
+        if order_status == "FILLED":
+            print(f"Successfully closed order in {market}")
+        else:
+            print(f"Failed to close order in {market}")
+            raise Exception("Failed to close order")
+    except Exception as e:
+        print("ABORT Program")
+        print("Unexpected Error in closing order:", e)
+        raise
 
 # ABORT all open positions
 def abort_all_positions(client):
@@ -125,5 +149,16 @@ def abort_all_positions(client):
             # Protect API
             time.sleep(0.5)
 
-        # Return cloder orders
-        return close_orders
+    # Empty the bot_agents.json file
+    empty_bot_agents_json()
+
+    # Return closed orders
+    return close_orders
+
+def empty_bot_agents_json():   
+    # Open the file in write mode and write an empty list or object
+    with open("bot_agents.json", "w") as file:
+        json.dump([], file)  # Writes an empty list to the file
+
+    print("bot_agents.json has been emptied.")
+        
